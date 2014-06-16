@@ -23,6 +23,30 @@ void sharpen(const Mat& imgin, Mat& imgout)
 
 }
 
+void reverse_color(Mat& img)
+{
+    const int channels = img.channels();
+
+    switch (channels) {
+    case 1:
+        for (int i = 0; i < img.rows; i++)
+            for (int j = 0; j < img.cols; j++)
+                img.at<uchar>(i, j) += 0xff;
+        break;
+    case 3:
+        for (int i = 0; i < img.rows; i++)
+            for (int j = 0; j < img.cols; j++)
+            {
+                img.at<Vec3b>(i, j)[0] = 0xff - img.at<Vec3b>(i, j)[0];
+                img.at<Vec3b>(i, j)[1] = 0xff - img.at<Vec3b>(i, j)[1];
+                img.at<Vec3b>(i, j)[2] = 0xff - img.at<Vec3b>(i, j)[2];
+            }
+        break;
+    default:
+        cout << "Wrong channel number of the image!" << endl;
+    }
+}
+
 int main(int argc, char **argv)
 {
     double t = (double)getTickCount();
@@ -66,14 +90,24 @@ int main(int argc, char **argv)
     LUT(image, lookUpTable, lut_img);
     timeMeasureOver("LUT");
 
+    /* reverse color */
+    Mat reverse_img = image.clone();
+    timeMeasureStart();
+    reverse_color(reverse_img);
+    timeMeasureOver("Reverse color");
+
     imwrite("gray.jpg", gray_img);
     imwrite("LUT.jpg", lut_img);
+    /*
     namedWindow(imageName, CV_WINDOW_AUTOSIZE);
     namedWindow("Gray image", CV_WINDOW_AUTOSIZE);
     namedWindow("LUT image", CV_WINDOW_AUTOSIZE);
+    namedWindow("reserve color", CV_WINDOW_AUTOSIZE);
+    */
     imshow(imageName, image);
     imshow("Gray image", gray_img);
     imshow("LUT image", lut_img);
+    imshow("reverse color", reverse_img);
 
     waitKey(0);
     return 0;
