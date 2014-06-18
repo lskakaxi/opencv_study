@@ -12,10 +12,10 @@ imageROI: imageROI.c
 	gcc -o $@ $< -lopencv_highgui -lopencv_core -lopencv_imgproc
 
 imgproc: imgproc.cpp
-	g++ -g -o $@ $< -lopencv_highgui -lopencv_core -lopencv_imgproc
+	g++ -g -o $@ $< util.cpp -lopencv_highgui -lopencv_core -lopencv_imgproc
 
 scan_image: scan_image.cpp
-	g++ -g -o $@ $< -lopencv_highgui -lopencv_core -lopencv_imgproc
+	g++ -g -o $@ $< util.cpp -lopencv_highgui -lopencv_core -lopencv_imgproc
 
 clean:
 	rm showimage showvideo imageROI imgproc scan_image

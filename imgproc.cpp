@@ -1,26 +1,42 @@
 #include <string>
 #include <iostream>
 #include <opencv2/opencv.hpp>
+#include "util.hpp"
 
 using namespace cv;
 using namespace std;
-// used in signle thread model
-static double t1;
-void timeMeasureStart(void)
-{
-    t1 = (double) getTickCount();
-}
-
-void timeMeasureOver(string str)
-{
-    t1 = ((double)getTickCount() - t1) / getTickFrequency();
-    cout << str << "cost time: " << t1 * 1000 << " ms" << endl;
-}
 
 void sharpen(const Mat& imgin, Mat& imgout)
 {
-    CV_Assert(imgin.depth() == CV_8U);
+    Mat sharpen_kern = (Mat_<char>(3, 3) << 0, -1, 0,
+                                          -1,  5, -1,
+                                           0, -1,  0);
 
+    cv::filter2D(imgin, imgout, imgin.depth(), sharpen_kern);
+}
+
+void sharpen_myself(const Mat& imgin, Mat& imgout)
+{
+    CV_Assert(imgin.depth() == CV_8U);
+    imgout.create(imgin.size(), imgin.type());
+
+    int channels = imgin.channels();
+
+    for (int j = 1; j < imgin.rows; j++) {
+        const uchar *prev_row = imgin.ptr<uchar>(j - 1);
+        const uchar *current_row = imgin.ptr<uchar>(j);
+        const uchar *next_row = imgin.ptr<uchar>(j + 1);
+
+        uchar *output = imgout.ptr<uchar>(j);
+        for (int i = channels; i < imgin.cols * channels - channels; i++) {
+            *output++ = saturate_cast<uchar>(5 * current_row[i] - prev_row[i] - next_row[i] -
+                        current_row[i-channels] - current_row[i+channels]);
+        }
+    }
+    imgout.row(0).setTo(Scalar(0));
+    imgout.row(imgout.rows-1).setTo(Scalar(0));
+    imgout.col(0).setTo(Scalar(0));
+    imgout.col(imgout.cols-1).setTo(Scalar(0));
 }
 
 void reverse_color(Mat& img)
@@ -34,13 +50,19 @@ void reverse_color(Mat& img)
                 img.at<uchar>(i, j) += 0xff;
         break;
     case 3:
-        for (int i = 0; i < img.rows; i++)
-            for (int j = 0; j < img.cols; j++)
+        uchar *p;
+        for (int i = 0; i < img.rows; i++) {
+            p = img.ptr<uchar>(i);
+            for (int j = 0; j < img.cols * channels; j++)
             {
+                p[j] = 255 - p[j];
+                /*
                 img.at<Vec3b>(i, j)[0] = 0xff - img.at<Vec3b>(i, j)[0];
                 img.at<Vec3b>(i, j)[1] = 0xff - img.at<Vec3b>(i, j)[1];
                 img.at<Vec3b>(i, j)[2] = 0xff - img.at<Vec3b>(i, j)[2];
+                */
             }
+        }
         break;
     default:
         cout << "Wrong channel number of the image!" << endl;
@@ -96,9 +118,16 @@ int main(int argc, char **argv)
     reverse_color(reverse_img);
     timeMeasureOver("Reverse color");
 
+    /* sharpen */
+    Mat sharpen_img;
+    timeMeasureStart();
+    sharpen_myself(image, sharpen_img);
+//    sharpen(image, sharpen_img);
+    timeMeasureOver("Sharpen");
+
+    /*
     imwrite("gray.jpg", gray_img);
     imwrite("LUT.jpg", lut_img);
-    /*
     namedWindow(imageName, CV_WINDOW_AUTOSIZE);
     namedWindow("Gray image", CV_WINDOW_AUTOSIZE);
     namedWindow("LUT image", CV_WINDOW_AUTOSIZE);
@@ -108,6 +137,7 @@ int main(int argc, char **argv)
     imshow("Gray image", gray_img);
     imshow("LUT image", lut_img);
     imshow("reverse color", reverse_img);
+    imshow("sharpen", sharpen_img);
 
     waitKey(0);
     return 0;
