@@ -6,6 +6,51 @@
 using namespace cv;
 using namespace std;
 
+int comp(const void *p, const void *q)
+{
+    unsigned int *a = (unsigned int *)p, *b = (unsigned int *)q;
+    a++; b++;
+    return *(unsigned int*)a - *(unsigned int *)b;
+}
+
+void histogram_equalization(const Mat& imgin, Mat& imgout)
+{
+    unsigned int gray_array[256][2];
+    histogram_stat(imgin, gray_array);
+
+    qsort(gray_array, 256, sizeof(gray_array[0]), comp);
+
+    for (int i = 0; i < 256; i++)
+        cout << gray_array[i][0] << ": " << gray_array[i][1] << endl;
+}
+
+void gray_with_kern(const Mat& imgin, Mat& imgout)
+{
+
+    int nRows = imgin.rows;
+    int nCols = imgin.cols;
+    int channels = imgin.channels();
+    int i, j;
+    uchar *p;
+    const uchar *pin;
+
+    imgout.create(nRows, nCols, imgin.depth());
+
+    if (imgin.channels() != 3) {
+        cout << "Wrong image format!\n";
+        return;
+    }
+    for (i = 0; i < nRows; i++) {
+        p = imgout.ptr<uchar>(i);
+        pin = imgin.ptr<uchar>(i);
+        for (j = 0; j < nCols; j++) {
+            /* BGR to gray */
+            float tmp = pin[j*channels] * 0.114 + pin[j*channels+1] * 0.587 + pin[j*channels+2] * 0.299;
+            p[j] = p[j+1] = p[j+2] = (uchar) tmp;
+        }
+    }
+}
+
 void sharpen(const Mat& imgin, Mat& imgout)
 {
     Mat sharpen_kern = (Mat_<char>(3, 3) << 0, -1, 0,
@@ -101,10 +146,14 @@ int main(int argc, char **argv)
     }
 
     /* convert to gray image */
-    Mat gray_img;
+    Mat gray_img, gray_img2, gray_img3;
     timeMeasureStart();
     cvtColor(image, gray_img, CV_BGR2GRAY);
     timeMeasureOver("cvtColor");
+    timeMeasureStart();
+    gray_with_kern(image, gray_img2);
+    timeMeasureOver("gray_with_kern");
+    gray_balance(gray_img, gray_img3);
 
     /* convert with lookuptable method */
     Mat lut_img;
@@ -121,20 +170,13 @@ int main(int argc, char **argv)
     /* sharpen */
     Mat sharpen_img;
     timeMeasureStart();
-    sharpen_myself(image, sharpen_img);
-//    sharpen(image, sharpen_img);
+//    sharpen_myself(image, sharpen_img);
+    sharpen(image, sharpen_img);
     timeMeasureOver("Sharpen");
 
-    /*
-    imwrite("gray.jpg", gray_img);
-    imwrite("LUT.jpg", lut_img);
-    namedWindow(imageName, CV_WINDOW_AUTOSIZE);
-    namedWindow("Gray image", CV_WINDOW_AUTOSIZE);
-    namedWindow("LUT image", CV_WINDOW_AUTOSIZE);
-    namedWindow("reserve color", CV_WINDOW_AUTOSIZE);
-    */
     imshow(imageName, image);
     imshow("Gray image", gray_img);
+    imshow("Gray image 2", gray_img2);
     imshow("LUT image", lut_img);
     imshow("reverse color", reverse_img);
     imshow("sharpen", sharpen_img);
