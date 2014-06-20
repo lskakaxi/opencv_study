@@ -9,19 +9,38 @@ using namespace std;
 int comp(const void *p, const void *q)
 {
     unsigned int *a = (unsigned int *)p, *b = (unsigned int *)q;
-    a++; b++;
+    a++; b++; // CURRENT_LEVEL_CNT
+    a++; b++; // CALC_LEVEL_CNT
     return *(unsigned int*)a - *(unsigned int *)b;
 }
 
 void histogram_equalization(const Mat& imgin, Mat& imgout)
 {
-    unsigned int gray_array[256][2];
+    CV_Assert(imgin.channels() == 1);
+    unsigned int gray_array[256][ARRAY_DIM];
+    float s[256];
+    unsigned int total = imgin.cols * imgin.rows;
+    uchar max = 255, min = 0;
+
+    imgout.create(imgin.size(), imgin.type());
     histogram_stat(imgin, gray_array);
-
-    qsort(gray_array, 256, sizeof(gray_array[0]), comp);
-
+    while (!gray_array[min++]); min--;
+    while (!gray_array[max--]); max++;
     for (int i = 0; i < 256; i++)
-        cout << gray_array[i][0] << ": " << gray_array[i][1] << endl;
+        s[i] = (float)gray_array[i][CALC_LEVEL_CNT] / (float)total;
+
+    for (int i = 0; i < imgin.rows; i++) {
+        const uchar *pin = imgin.ptr<uchar>(i);
+        uchar *pout = imgout.ptr<uchar>(i);
+        for (int j = 0; j < imgin.cols; j++)
+            pout[j] = (uchar)(s[pin[j]] * (float)(max - min)) + min;
+    }
+    /*
+    qsort(gray_array, 256, sizeof(gray_array[0]), comp);
+    for (int i = 0; i < 256; i++)
+        cout << total << ": " << gray_array[i][2] << ": " << s[i]
+             << ": " << s[i] * (float)(max - min) << endl;
+    */
 }
 
 void gray_with_kern(const Mat& imgin, Mat& imgout)
@@ -153,7 +172,9 @@ int main(int argc, char **argv)
     timeMeasureStart();
     gray_with_kern(image, gray_img2);
     timeMeasureOver("gray_with_kern");
-    gray_balance(gray_img, gray_img3);
+    timeMeasureStart();
+    histogram_equalization(gray_img, gray_img3);
+    timeMeasureOver("histogram_equalization");
 
     /* convert with lookuptable method */
     Mat lut_img;
@@ -177,6 +198,7 @@ int main(int argc, char **argv)
     imshow(imageName, image);
     imshow("Gray image", gray_img);
     imshow("Gray image 2", gray_img2);
+    imshow("Gray image 3", gray_img3);
     imshow("LUT image", lut_img);
     imshow("reverse color", reverse_img);
     imshow("sharpen", sharpen_img);
