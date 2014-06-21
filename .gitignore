@@ -3,3 +3,4 @@ imgproc
 scan_image
 showimage
 showvideo
+edge_detection
