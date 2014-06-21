@@ -1,6 +1,6 @@
 .PYTHON: clean
 
-all: showimage showvideo imageROI imgproc scan_image edge_detection
+all: showimage showvideo imageROI imgproc scan_image edge_detection blending
 
 showimage: show_image.c
 	gcc -o $@ $< -lopencv_highgui -lopencv_core -lopencv_imgproc
@@ -20,5 +20,8 @@ edge_detection: edge_detection.cpp
 scan_image: scan_image.cpp
 	g++ -g -o $@ $< util.cpp -lopencv_highgui -lopencv_core -lopencv_imgproc
 
+blending: blending.cpp
+	g++ -g -o $@ $< util.cpp -lopencv_highgui -lopencv_core -lopencv_imgproc
+
 clean:
-	rm showimage showvideo imageROI imgproc scan_image edge_detection
+	rm showimage showvideo imageROI imgproc scan_image edge_detection blending
